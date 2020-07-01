@@ -1,8 +1,9 @@
 # An animated Dungeon Master style Camera
 An animated camera control script that gives you "Dungeon Master"/"Xenomorph"/"Legend of Grimrock" style WSADQE control in your Unity3D game.
 
-I am a huge fan of the old Amiga game "Xenomorph" back from the nineties. So I decided to start a similar SciFi based game (working title "Xenomorphs")
-Of course I need similar movement/rotation then thoose games so I started writting this script. Collision detection can be easily added to the appropriate methods.
+I am a huge fan of the old Amiga game **'Xenomorph'** back from the nineties. So I decided to start a similar SciFi themed game (working title 'Xenomorphs')
+
+Of course I need similar movement/rotation then thoose games so I started writting this script. 
 
 # The controls
 * 'W' Moves you 1 cell forward
@@ -15,6 +16,11 @@ Of course I need similar movement/rotation then thoose games so I started writti
 # How it looks like in action
 You can watch a work in progress version of "Xenomorphs" on Youtube:
 
-[![](http://img.youtube.com/vi/35Q-j6YbEYU/0.jpg)](http://www.youtube.com/watch?v=35Q-j6YbEYU "")
+[![](http://img.youtube.com/vi/35Q-j6YbEYU/0.jpg)](http://www.youtube.com/watch?v=35Q-j6YbEYU "Click me!")
+
+# Not (yet) included as they are part of the prototype
+* Unittests (the whole thing was written TDD style)
+* Collision detection
+* Recoil animation when you try to run into a wall.
 
 Have fun, Lutz
