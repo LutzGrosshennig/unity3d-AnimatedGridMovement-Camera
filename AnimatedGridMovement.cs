@@ -1,6 +1,6 @@
 ﻿/**************************************************************
  * The AnimatedGridMovement script performs "Dungeon Master"/ * 
- * "Legend of Grimrock" style WSAEQ movement in your Unity3D  *
+ * "Legend of Grimrock" style WSADEQ movement in your Unity3D *
  * game.                                                      *
  *                                                            *
  * Written by: Lutz Grosshennig, 06/27/2020                   *
@@ -11,7 +11,7 @@ using UnityEngine;
 public class AnimatedGridMovement : MonoBehaviour
 {
     public float gridSize = 4.0f;
-    public float rotationMulitplier = 5.0f;
+    public float rotationMultiplier = 5.0f;
 
     private const float LeftHand = -90.0f;
     private const float RightHand = +90.0f;
@@ -73,7 +73,7 @@ public class AnimatedGridMovement : MonoBehaviour
 
     private void AnimateRotation(float step)
     {
-        transform.rotation = Quaternion.SlerpUnclamped(transform.rotation, rotateTowardsDirection, step * rotationMulitplier);
+        transform.rotation = Quaternion.SlerpUnclamped(transform.rotation, rotateTowardsDirection, step * rotationMultiplier);
         CompensateRotationRoundingErrors();
     }
 
@@ -96,69 +96,78 @@ public class AnimatedGridMovement : MonoBehaviour
 
     private void MoveForward()
     {
-        moveTowardsPosition += CalculateOneGridPositionForward();
+        CollisonCheckedMovement(CalculateForwardPosition());
     }
 
     private void MoveBackward()
     {
-        moveTowardsPosition -= CalculateOneGridPositionForward();
+        CollisonCheckedMovement(-CalculateForwardPosition());
     }
 
     private void StrafeRight()
     {
-        StrafeOneGridPosition(RightHand);
+        CollisonCheckedMovement(CalculateStrafePosition());
     }
 
     private void StrafeLeft()
     {
-        StrafeOneGridPosition(LeftHand);
+        CollisonCheckedMovement(-CalculateStrafePosition());
+    }
+
+    private void CollisonCheckedMovement(Vector3 movementDirection)
+    {
+        Vector3 targetPosition = moveTowardsPosition + movementDirection;
+
+        // replace the 'true' with your collision detection code.
+        bool canMove = true;
+
+        if (canMove)
+        {
+            moveTowardsPosition = targetPosition;
+        }
+        else
+        {
+            Debug.Log("The path is blocked.");
+        }
     }
 
     private void TurnRight()
     {
-        TurnCamera(RightHand);
+        TurnEulerDegrees(RightHand);
     }
 
     private void TurnLeft()
     {
-        TurnCamera(LeftHand);
+        TurnEulerDegrees(LeftHand);
+    }
+
+    private void TurnEulerDegrees(in float eulerDirectionDelta)
+    {
+        rotateTowardsDirection *= Quaternion.Euler(0, eulerDirectionDelta, 0);
     }
 
     private bool IsStationary()
     {
-        return !IsMoving() && !IsRotating();
+        return !(IsMoving() || IsRotating());
     }
 
     private bool IsMoving()
     {
-        return !(transform.position == moveTowardsPosition);
+        return transform.position != moveTowardsPosition;
     }
 
     private bool IsRotating()
     {
-        return !(transform.rotation == rotateTowardsDirection);
+        return transform.rotation != rotateTowardsDirection;
     }
 
-    private Vector3 CalculateOneGridPositionForward()
+    private Vector3 CalculateForwardPosition()
     {
         return transform.forward * gridSize;
     }
 
-    private void TurnCamera(in float angle)
+    private Vector3 CalculateStrafePosition()
     {
-        RotateCameraTemporaryAndPerformAction(angle, () => { rotateTowardsDirection = transform.rotation; });
-    }
-
-    private void StrafeOneGridPosition(in float angle)
-    {
-        RotateCameraTemporaryAndPerformAction(angle, () => { moveTowardsPosition += CalculateOneGridPositionForward(); });
-    }
-
-    private void RotateCameraTemporaryAndPerformAction(in float angle, System.Action lambdaFunction)
-    {
-        var rotationTemp = transform.rotation;
-        transform.Rotate(Vector3.up, angle);
-        lambdaFunction();
-        transform.rotation = rotationTemp;
+        return transform.right * gridSize;
     }
 }
