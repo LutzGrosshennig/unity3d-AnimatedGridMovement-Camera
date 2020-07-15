@@ -1,4 +1,4 @@
-# An animated "Dungeon Master" / "Legend of Grimrock" / "Eye of the Beholder style camera.
+# An animated "Dungeon Master" / "Legend of Grimrock" / "Eye of the Beholder" style camera.
 
 An animated camera control script that gives you "Dungeon Master"/"Xenomorph"/"Legend of Grimrock" style WSADQE control in your Unity3D game.
 
