@@ -10,19 +10,23 @@ using UnityEngine;
 
 public class AnimatedGridMovement : MonoBehaviour
 {
-    public float gridSize = 4.0f;
-    public float rotationMultiplier = 5.0f;
-
     private const float LeftHand = -90.0f;
     private const float RightHand = +90.0f;
 
+    public float gridSize = 4.0f;
+    public float rotationSpeed = 5.0f;
+
     private Vector3 moveTowardsPosition;
+    private Quaternion rotateFromDirection;
     private Quaternion rotateTowardsDirection;
+  
+    private float rotationTime = 0.0f;
 
     void Start()
     {
         moveTowardsPosition = transform.position;
         rotateTowardsDirection = transform.rotation;
+        rotateFromDirection = transform.rotation;
     }
 
     private void FixedUpdate()
@@ -59,21 +63,21 @@ public class AnimatedGridMovement : MonoBehaviour
 
     void Update()
     {
-        var step = Time.deltaTime * gridSize;
-
         if (IsMoving())
         {
+            var step = Time.deltaTime * gridSize;
             AnimateMovement(step);
         }
         if (IsRotating())
         {
-            AnimateRotation(step);
+            AnimateRotation();
         }
     }
 
-    private void AnimateRotation(float step)
+    private void AnimateRotation()
     {
-        transform.rotation = Quaternion.SlerpUnclamped(transform.rotation, rotateTowardsDirection, step * rotationMultiplier);
+        rotationTime += Time.deltaTime;
+        transform.rotation = Quaternion.Slerp(rotateFromDirection, rotateTowardsDirection, rotationTime * rotationSpeed);
         CompensateRotationRoundingErrors();
     }
 
@@ -117,17 +121,12 @@ public class AnimatedGridMovement : MonoBehaviour
     private void CollisonCheckedMovement(Vector3 movementDirection)
     {
         Vector3 targetPosition = moveTowardsPosition + movementDirection;
-
-        // replace the 'true' with your collision detection code.
+        
+        // TODO: Replace the true flag with your collision detection code.
         bool canMove = true;
-
         if (canMove)
         {
             moveTowardsPosition = targetPosition;
-        }
-        else
-        {
-            Debug.Log("The path is blocked.");
         }
     }
 
@@ -143,7 +142,9 @@ public class AnimatedGridMovement : MonoBehaviour
 
     private void TurnEulerDegrees(in float eulerDirectionDelta)
     {
-        rotateTowardsDirection *= Quaternion.Euler(0, eulerDirectionDelta, 0);
+        rotateFromDirection = transform.rotation;
+        rotationTime = 0.0f;
+        rotateTowardsDirection *= Quaternion.Euler(0.0f, eulerDirectionDelta, 0.0f);
     }
 
     private bool IsStationary()
