@@ -17,7 +17,7 @@ Of course I need similar movement/rotation then thoose games so I started writti
 # What it looks like in action
 You can watch a work in progress version of "Xenomorphs" on Youtube:
 
-[![](https://img.youtube.com/vi/Vktcj-LS-bo/0.jpg)](https://www.youtube.com/watch?v=Vktcj-LS-bo "Click me!")
+[![](https://i9.ytimg.com/vi/rUA0FSf8aAE/mq3.jpg?sqp=COCkhoMG&rs=AOn4CLBvPqUK6cBgKEGCFchNoeEvzhJHgQ)](https://youtu.be/rUA0FSf8aAE "Click me!")
 
 # Not (yet) included as they are part of the prototype
 * Unittests (the whole thing was written TDD style)
