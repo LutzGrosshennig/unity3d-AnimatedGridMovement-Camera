@@ -6,6 +6,12 @@ I am a huge fan of the old Amiga game **'Xenomorph'** back from the nineties. So
 
 Of course I need similar movement/rotation then thoose games so I started writting this script. 
 
+# Usage
+
+* Attach the script as a component to your main camera.
+* Adjust the grid size to meet your grid.
+* Adjust the rotation speed multiplier to your liking.
+
 # The controls
 * 'W' Moves you 1 cell forward
 * 'S' Moves you 1 cell backward
@@ -15,14 +21,12 @@ Of course I need similar movement/rotation then thoose games so I started writti
 * 'E' Turn right 90°
 
 # What it looks like in action
-You can watch a work in progress version of "Xenomorphs" on Youtube:
+You can watch a work in progress version of "Xenomorph 2022" on Youtube:
 
 [![](https://img.youtube.com/vi/rUA0FSf8aAE/3.jpg)](https://youtu.be/rUA0FSf8aAE "Click me!")
 
-# Not (yet) included as they are part of the prototype
-* Unittests (the whole thing was written TDD style)
-* Collision detection
-* Recoil animation when you try to run into a wall.
-
+# Planned improvements
+* Expose a movement speed multiplier.
+* Make a version that works with the new input system.
 
 Have fun, Lutz
