@@ -13,8 +13,9 @@ public class AnimatedGridMovement : MonoBehaviour
     private const float LeftHand = -90.0f;
     private const float RightHand = +90.0f;
 
-    public float gridSize = 4.0f;
-    public float rotationSpeed = 5.0f;
+    [SerializeField] private float gridSize = 4.0f;
+    [SerializeField] private float rotationSpeed = 5.0f;
+    [SerializeField] private float movementSpeed = 1.0f;
 
     private Vector3 moveTowardsPosition;
     private Quaternion rotateFromDirection;
@@ -65,7 +66,7 @@ public class AnimatedGridMovement : MonoBehaviour
     {
         if (IsMoving())
         {
-            var step = Time.deltaTime * gridSize;
+            var step = Time.deltaTime * gridSize * movementSpeed;
             AnimateMovement(step);
         }
         if (IsRotating())
