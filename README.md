@@ -28,8 +28,9 @@ You can watch a work in progress version of "Xenomorph 2409" on YouTube:
 </div>
 
 # Planned improvements
-* Make a version that works with the new input system.
-* ~~Expose a movement speed multiplier.~~ (Done!)
 
+You may want to check out a new and more advanced version of the script https://github.com/LutzGrosshennig/unity3d-advanced-grid-movement
+
+Since this version is much simpler to understand I will leave it as it is.
 
 Have fun, Lutz
