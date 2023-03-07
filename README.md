@@ -20,6 +20,11 @@ Of course I need similar movement/rotation then thoose games so I started writti
 * 'Q' Turn left 90°
 * 'E' Turn right 90°
 
+# MEW! Free look mode
+
+Press the right mouse button to enter a free look mode where you can look round without a grid restriction.
+Releasing the mouse button will put you back in movement mode.
+
 # What it looks like in action
 You can watch a work in progress version of "Xenomorph 2409" on YouTube:
 

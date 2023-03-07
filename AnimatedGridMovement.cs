@@ -13,9 +13,20 @@ public class AnimatedGridMovement : MonoBehaviour
     private const float LeftHand = -90.0f;
     private const float RightHand = +90.0f;
 
+    [Header("Grid settings")]
     [SerializeField] private float gridSize = 4.0f;
+
+    [Header("Movement settings")]
     [SerializeField] private float rotationSpeed = 5.0f;
     [SerializeField] private float movementSpeed = 1.0f;
+
+    [Header("Free look settings")]
+    [SerializeField] private float freelookSensitivity = 1.0f;
+    [Range(45.0f, 89.0f)]
+    [SerializeField] private float freelookAngle = 85.0f;
+
+
+    private bool freelookModeEnabled = false;
 
     private Vector3 moveTowardsPosition;
     private Quaternion rotateFromDirection;
@@ -64,14 +75,47 @@ public class AnimatedGridMovement : MonoBehaviour
 
     void Update()
     {
-        if (IsMoving())
+        if (Input.GetKeyDown(KeyCode.Mouse1))
         {
-            var step = Time.deltaTime * gridSize * movementSpeed;
-            AnimateMovement(step);
+            EnterFreeLookMode();
         }
-        if (IsRotating())
+        else if (Input.GetKeyUp(KeyCode.Mouse1))
         {
-            AnimateRotation();
+            ExitFreeLookMode();
+        }
+
+        if (freelookModeEnabled)
+        {
+            // calling this function causes a native call to the c++ side, so we only want to do that once and reuse the result.
+            Vector3 localEulerAngles = transform.localEulerAngles;
+
+            float lookAtAngle_Y = localEulerAngles.y + Input.GetAxis("Mouse X") * freelookSensitivity;
+            float lookAtAngle_X = localEulerAngles.x - Input.GetAxis("Mouse Y") * freelookSensitivity;
+
+            // calling this function causes a native call to the c++ side, so we only want to do that once and reuse the result.
+            float viewDirection = rotateTowardsDirection.eulerAngles.y;
+
+            float minClampRange = viewDirection - freelookAngle;
+            float maxClampRange = viewDirection + freelookAngle;
+
+            // Since we are in Euler space we need to prevent a "Gimble look", however Euler angles are modular so we
+            // need to take this into account when we want to clamp the angles.
+            lookAtAngle_X = ClampAngle(lookAtAngle_X, -freelookAngle, freelookAngle);
+            lookAtAngle_Y = ClampAngle(lookAtAngle_Y, minClampRange, maxClampRange);
+
+            transform.localEulerAngles = new Vector3(lookAtAngle_X, lookAtAngle_Y, 0.0f);
+        }
+        else
+        {
+            if (IsMoving())
+            {
+                var step = Time.deltaTime * gridSize * movementSpeed;
+                AnimateMovement(step);
+            }
+            if (IsRotating())
+            {
+                AnimateRotation();
+            }
         }
     }
 
@@ -171,5 +215,44 @@ public class AnimatedGridMovement : MonoBehaviour
     private Vector3 CalculateStrafePosition()
     {
         return transform.right * gridSize;
+    }
+
+    private void OnDisable()
+    {
+        ExitFreeLookMode();
+    }
+
+    private void EnterFreeLookMode()
+    {
+        freelookModeEnabled = true;
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    private void ExitFreeLookMode()
+    {
+        freelookModeEnabled = false;
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+    // Euler angles are modular and cant be simply clamped and therefore need special treatment.
+    // I.E. 90° is the same as 450° or -270° and there is no gurantee which value you are getting
+    // so we need to filter this out. This function is most likly suited to be placed some where else though
+    // but the idea here is to have everything in a single simple script that you can attach to your camera.
+    private float ClampAngle(float current, float min, float max)
+    {
+        float deltaAngle = Mathf.Abs(((min - max) + 180.0f) % 360.0f - 180.0f);
+        float deltaAngleHalf = deltaAngle * 0.5f;
+        float middelAngle = min + deltaAngleHalf;
+
+        float offset = Mathf.Abs(Mathf.DeltaAngle(current, middelAngle)) - deltaAngleHalf;
+        
+        if (offset > 0.0f)
+        {
+            current = Mathf.MoveTowardsAngle(current, middelAngle, offset);
+        }
+        
+        return current;
     }
 }
