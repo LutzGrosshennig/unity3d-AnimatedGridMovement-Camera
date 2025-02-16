@@ -1,11 +1,12 @@
 ﻿/**************************************************************
  * The AnimatedGridMovement script performs "Dungeon Master"/ * 
  * "Legend of Grimrock" style WSADEQ movement in your Unity3D *
- * game.                                                      *
+ * game using a single file.                                  *
  *                                                            *
  * Written by: Lutz Grosshennig, 06/27/2020                   *
  * MIT Licence                                                *
  * ************************************************************/
+using System;
 using UnityEngine;
 
 public class AnimatedGridMovement : MonoBehaviour
@@ -14,38 +15,39 @@ public class AnimatedGridMovement : MonoBehaviour
     private const float RightHand = +90.0f;
 
     [Header("Grid settings")]
-    [SerializeField] private float gridSize = 4.0f;
+    [SerializeField] private float gridSize = 3.0f;
 
-    [Header("Movement settings")]
+    [Header("Animation settings")]
     [SerializeField] private float rotationSpeed = 5.0f;
-    [SerializeField] private float movementSpeed = 1.0f;
+    [SerializeField] private float movementSpeed = 5.0f;
 
     [Header("Free look settings")]
     [SerializeField] private float freelookSensitivity = 1.0f;
     [Range(45.0f, 89.0f)]
     [SerializeField] private float freelookAngle = 85.0f;
+    [SerializeField] private float freelookSnapbackSpeed = 10.0f;
 
-
-    private bool freelookModeEnabled = false;
-
-    private Vector3 moveTowardsPosition;
+    // Used for the rotation animation
     private Quaternion rotateFromDirection;
     private Quaternion rotateTowardsDirection;
-  
     private float rotationTime = 0.0f;
 
-    void Start()
-    {
-        moveTowardsPosition = transform.position;
-        rotateTowardsDirection = transform.rotation;
-        rotateFromDirection = transform.rotation;
-    }
+    // Used for the movement animation
+    private Vector3 moveFromPosition;
+    private Vector3 moveTowardsPosition;
+    private float movementTime = 0.0f;
 
-    private void FixedUpdate()
+    // Used for the freelook + animation
+    private bool freelookModeEnabled = false;
+    private float freelookTime = 0.0f;
+    private Quaternion freelookReturnToRotation;
+    private Quaternion freelookStartFromRotation;
+
+    void Update()
     {
         if (IsStationary())
         {
-            // Personaly I would prefer a dictionary<KeyCode,Action> lookup but this does not seem possible with Unity3D.Input
+            // Personaly I would prefer a dictionary<KeyCode,Action> lookup but this does not seem possible with the old input system.
             if (Input.GetKey(KeyCode.W))
             {
                 MoveForward();
@@ -53,14 +55,6 @@ public class AnimatedGridMovement : MonoBehaviour
             else if (Input.GetKey(KeyCode.S))
             {
                 MoveBackward();
-            }
-            else if (Input.GetKey(KeyCode.Q))
-            {
-                TurnLeft();
-            }
-            else if (Input.GetKey(KeyCode.E))
-            {
-                TurnRight();
             }
             else if (Input.GetKey(KeyCode.A))
             {
@@ -70,141 +64,176 @@ public class AnimatedGridMovement : MonoBehaviour
             {
                 StrafeRight();
             }
+            else if (Input.GetKey(KeyCode.Q))
+            {
+                TurnLeft();
+            }
+            else if (Input.GetKey(KeyCode.E))
+            {
+                TurnRight();
+            }
+            else if (Input.GetKeyDown(KeyCode.Mouse1))
+            {
+                EnterFreeLookMode();
+            }
         }
-    }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Mouse1))
-        {
-            EnterFreeLookMode();
-        }
-        else if (Input.GetKeyUp(KeyCode.Mouse1))
+        // Left mouse button released?
+        if (Input.GetKeyUp(KeyCode.Mouse1))
         {
             ExitFreeLookMode();
         }
 
+        // Are we in free look mode?
         if (freelookModeEnabled)
         {
-            // calling this function causes a native call to the c++ side, so we only want to do that once and reuse the result.
-            Vector3 localEulerAngles = transform.localEulerAngles;
-
-            float lookAtAngle_Y = localEulerAngles.y + Input.GetAxis("Mouse X") * freelookSensitivity;
-            float lookAtAngle_X = localEulerAngles.x - Input.GetAxis("Mouse Y") * freelookSensitivity;
-
-            // calling this function causes a native call to the c++ side, so we only want to do that once and reuse the result.
-            float viewDirection = rotateTowardsDirection.eulerAngles.y;
-
-            float minClampRange = viewDirection - freelookAngle;
-            float maxClampRange = viewDirection + freelookAngle;
-
-            // Since we are in Euler space we need to prevent a "Gimble look", however Euler angles are modular so we
-            // need to take this into account when we want to clamp the angles.
-            lookAtAngle_X = ClampAngle(lookAtAngle_X, -freelookAngle, freelookAngle);
-            lookAtAngle_Y = ClampAngle(lookAtAngle_Y, minClampRange, maxClampRange);
-
-            transform.localEulerAngles = new Vector3(lookAtAngle_X, lookAtAngle_Y, 0.0f);
+            DoFreeLook();
         }
         else
         {
             if (IsMoving())
             {
-                var step = Time.deltaTime * gridSize * movementSpeed;
-                AnimateMovement(step);
+                AnimateMovement();
             }
-            if (IsRotating())
+            else if (IsRotating())
             {
                 AnimateRotation();
+            }
+            else if (IsSnapBack())
+            {
+                AnimateSnapBack();
             }
         }
     }
 
     private void AnimateRotation()
     {
-        rotationTime += Time.deltaTime;
-        transform.rotation = Quaternion.Slerp(rotateFromDirection, rotateTowardsDirection, rotationTime * rotationSpeed);
-        CompensateRotationRoundingErrors();
-    }
+        rotationTime += Time.deltaTime * rotationSpeed;
+        transform.rotation = Quaternion.Slerp(rotateFromDirection, rotateTowardsDirection, rotationTime);
 
-    private void AnimateMovement(float step)
-    {
-        transform.position = Vector3.MoveTowards(transform.position, moveTowardsPosition, step);
-    }
-
-    private void CompensateRotationRoundingErrors()
-    {
-        // Bear in mind that floating point numbers are inaccurate by design. 
-        // The == operator performs a fuzy compare which means that we are only approximatly near the target rotation.
-        // We may not entirely reached the rotateTowardsViewAngle or we may have slightly overshot it already (both within the margin of error).
-        if (transform.rotation == rotateTowardsDirection)
+        if (rotationTime >= 1.0f)
         {
-            // To compensate rounding errors we explictly set the transform to our desired rotation.
+            rotationTime = 0;
             transform.rotation = rotateTowardsDirection;
         }
     }
 
-    private void MoveForward()
+    private void AnimateMovement()
+    {
+        movementTime += Time.deltaTime * movementSpeed;
+        transform.position = Vector3.Lerp(moveFromPosition, moveTowardsPosition, movementTime);
+
+        if (movementTime >= 1.0f)
+        {
+            movementTime = 0.0f;
+            transform.position = moveTowardsPosition;
+        }
+    }
+
+    private void AnimateSnapBack()
+    {
+        freelookTime += Time.deltaTime * freelookSnapbackSpeed;
+        transform.localRotation = Quaternion.Slerp(freelookStartFromRotation, freelookReturnToRotation, freelookTime);
+        if (freelookTime >= 1.0f)
+        {
+            freelookTime = 0.0f;
+            transform.localRotation = freelookReturnToRotation;
+        }
+    }
+
+    private void DoFreeLook()
+    {
+        // calling this function causes a native call to the c++ side, so we only want to do that once and reuse the result.
+        Vector3 localEulerAngles = transform.localEulerAngles;
+
+        float lookAtAngle_Y = localEulerAngles.y + Input.GetAxis("Mouse X") * freelookSensitivity;
+        float lookAtAngle_X = localEulerAngles.x - Input.GetAxis("Mouse Y") * freelookSensitivity;
+
+        // calling this function causes a native call to the c++ side, so we only want to do that once and reuse the result.
+        float viewDirection = rotateTowardsDirection.eulerAngles.y;
+
+        float minClampRange = viewDirection - freelookAngle;
+        float maxClampRange = viewDirection + freelookAngle;
+
+        // Since we are in Euler space we need to prevent a "Gimble look", however Euler angles are modular so we
+        // need to take this into account when we want to clamp the angles.
+        lookAtAngle_X = ClampAngle(lookAtAngle_X, -freelookAngle, freelookAngle);
+        lookAtAngle_Y = ClampAngle(lookAtAngle_Y, minClampRange, maxClampRange);
+
+        transform.localEulerAngles = new Vector3(lookAtAngle_X, lookAtAngle_Y, 0.0f);
+    }
+
+    public void MoveForward()
     {
         CollisonCheckedMovement(CalculateForwardPosition());
     }
 
-    private void MoveBackward()
+    public void MoveBackward()
     {
         CollisonCheckedMovement(-CalculateForwardPosition());
     }
 
-    private void StrafeRight()
+    public void StrafeRight()
     {
         CollisonCheckedMovement(CalculateStrafePosition());
     }
 
-    private void StrafeLeft()
+    public void StrafeLeft()
     {
         CollisonCheckedMovement(-CalculateStrafePosition());
     }
-
-    private void CollisonCheckedMovement(Vector3 movementDirection)
-    {
-        Vector3 targetPosition = moveTowardsPosition + movementDirection;
-        
-        // TODO: Replace the true flag with your collision detection code.
-        bool canMove = true;
-        if (canMove)
-        {
-            moveTowardsPosition = targetPosition;
-        }
-    }
-
-    private void TurnRight()
+    public void TurnRight()
     {
         TurnEulerDegrees(RightHand);
     }
 
-    private void TurnLeft()
+    public void TurnLeft()
     {
         TurnEulerDegrees(LeftHand);
     }
 
+
+    private void CollisonCheckedMovement(Vector3 movementDirection)
+    {
+        Vector3 targetPosition = transform.position + movementDirection;
+
+        // TODO: Replace the true flag with your collision detection code!
+        bool canMove = true;
+
+        if (canMove)
+        {
+            movementTime = Time.deltaTime;
+            moveFromPosition = transform.position;
+            moveTowardsPosition = targetPosition;
+        }
+    }
+
     private void TurnEulerDegrees(in float eulerDirectionDelta)
     {
+        rotationTime = Time.deltaTime;
         rotateFromDirection = transform.rotation;
-        rotationTime = 0.0f;
+        rotateTowardsDirection = rotateFromDirection;
         rotateTowardsDirection *= Quaternion.Euler(0.0f, eulerDirectionDelta, 0.0f);
     }
 
-    private bool IsStationary()
+    public bool IsStationary()
     {
-        return !(IsMoving() || IsRotating());
+        return !(IsMoving() || IsRotating() || IsSnapBack() || freelookModeEnabled);
     }
 
     private bool IsMoving()
     {
-        return transform.position != moveTowardsPosition;
+        return movementTime > 0.0f;
     }
 
     private bool IsRotating()
     {
-        return transform.rotation != rotateTowardsDirection;
+        return rotationTime > 0.0f;
+    }
+
+    private bool IsSnapBack()
+    {
+        return freelookTime > 0.0f;
     }
 
     private Vector3 CalculateForwardPosition()
@@ -227,6 +256,7 @@ public class AnimatedGridMovement : MonoBehaviour
         freelookModeEnabled = true;
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+        freelookReturnToRotation = transform.localRotation;
     }
 
     private void ExitFreeLookMode()
@@ -234,6 +264,8 @@ public class AnimatedGridMovement : MonoBehaviour
         freelookModeEnabled = false;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        freelookStartFromRotation = transform.localRotation;
+        freelookTime = Time.deltaTime;
     }
 
     // Euler angles are modular and cant be simply clamped and therefore need special treatment.
@@ -247,12 +279,12 @@ public class AnimatedGridMovement : MonoBehaviour
         float middelAngle = min + deltaAngleHalf;
 
         float offset = Mathf.Abs(Mathf.DeltaAngle(current, middelAngle)) - deltaAngleHalf;
-        
+
         if (offset > 0.0f)
         {
             current = Mathf.MoveTowardsAngle(current, middelAngle, offset);
         }
-        
+
         return current;
     }
 }
